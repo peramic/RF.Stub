@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+
+	<info organisation="havis/device/test" module="rf" default="true" />
+
+	<configurations>
+		<conf name="default" />
+		<conf name="doc" />
+		<conf name="src" />
+		<conf name="deb" />
+	</configurations>
+
+	<publications>
+		<artifact name="havis.device.test.rf" conf="default" />
+		<artifact name="havis.device.test.rf-javadoc" conf="doc" />
+		<artifact name="havis.device.test.rf-sources" conf="src" />
+		<artifact name="havis.device.test.rf" type="deb" conf="deb" />
+	</publications>
+
+	<dependencies>
+		<dependency org="havis/device/rf" name="common" rev="${havis.version}" conf="default" />
+		<dependency org="havis/device/test" name="hardware" rev="${havis.version}" conf="default" />
+	</dependencies>
+
+</ivy-module>

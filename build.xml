@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="havis.device.test.rf" default="publish" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+	<property file="${basedir}/build.properties" />
+	<property name="basename" value="${ant.project.name}" />
+	<property name="src.main.dir" location="${basedir}/src/main/java" />
+	<property name="src.test.dir" location="${basedir}/src/test/java" />
+	<property name="resources.dir" location="${basedir}/src/main/resources" />
+	<property name="resources.dir.classpath" location="${resources.dir}/classpath/" />
+	<property name="lib.dir" location="${basedir}/lib" />
+	<property name="build.dir" location="${basedir}/target" />
+	<property name="build.dir.classes" location="${build.dir}/classes" />
+	<property name="build.dir.test" location="${basedir}/target/test" />
+	<property name="build.dir.test.classes" location="${basedir}/target/test/classes" />
+	<property name="dst.dir" location="${build.dir}/deb/opt/havis-apps" />
+	<property name="doc.dir" location="${build.dir}/doc" />
+	<property file="${resources.dir}/build.properties" />
+	<property file="${resources.dir}/MANIFEST.MF" prefix="manifest" />
+
+	<filterset id="manifest" filtersfile="${resources.dir}/MANIFEST.MF" />
+
+	<property name="jmockit.coverage.exclude" value="havis\.device\.test\.rf\.test\..*" />
+	<property name="jmockit.coverage.outputDir" location="${build.dir.test}/coverage-report" />
+
+	<property name="javac.version" value="8" />
+	
+	<path id="build.classpath">
+		<fileset dir="${lib.dir}" includes="**/*.jar" />
+	</path>
+
+	<!-- Checks if the build properties are set prints an error message otherwise -->
+	<target name="check.build.properties">
+		<condition property="ivy.resolver" else="local">
+			<isset property="ivy.resolver" />
+		</condition>
+		<fail message="Missing property 'api.url'. Does 'build.properties' file exists?" unless="api.url" />
+		<fail message="Missing property 'ivy.url'. Does 'build.properties' file exists?" unless="ivy.url" />
+	</target>
+
+	<target name="clean-cache" description="Cleans the cache">
+		<ivy:cleancache />
+	</target>
+
+	<target name="clean" description="Cleans the project">
+		<delete dir="${build.dir}" includeemptydirs="true" />
+		<delete dir="${lib.dir}" includeemptydirs="true" />
+	</target>
+
+	<target name="clean-all" depends="clean, clean-cache" description="Cleans the project and cache" />
+
+	<target name="retrieve">
+		<ivy:retrieve log="quiet" />
+	</target>
+
+	<!-- Compiles the java source files -->
+	<target name="compile" depends="check.build.properties, retrieve">
+		<mkdir dir="${build.dir.classes}" />
+		<javac srcdir="${src.main.dir}" destdir="${build.dir.classes}" release="${javac.version}" debug="${javac.debug}" includeantruntime="false">
+			<classpath>
+				<!-- build libraries -->
+				<path refid="build.classpath" />
+			</classpath>
+		</javac>
+	</target>
+
+	<!-- Compiles the test source files -->
+	<target name="prepare" depends="compile">
+		<mkdir dir="${build.dir.test.classes}" />
+
+		<javac srcdir="${src.test.dir}" destdir="${build.dir.test.classes}" release="${javac.version}" debug="${javac.debug}" includeantruntime="false">
+			<classpath>
+				<path refid="build.classpath" />
+				<pathelement location="${build.dir.classes}" />
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="test" depends="prepare" unless="${skip.test}">
+		<junit printsummary="true" fork="yes" haltonerror="yes" haltonfailure="yes">
+			<jvmarg value="-Djmockit-coverage-excludes=${jmockit.coverage.exclude}" />
+			<jvmarg value="-Djmockit-coverage-outputDir=${jmockit.coverage.outputDir}" />			
+			<classpath>				
+				<pathelement location="${build.dir.test.classes}" />
+				<pathelement location="${resources.dir.test.classpath}" />
+				<pathelement location="${build.dir.classes}" />
+				<pathelement location="${resources.dir.classpath}" />
+				<path refid="build.classpath" />
+			</classpath>
+			<formatter type="xml" />
+			<test name="havis.device.test.rf.test.TestSuite" todir="${build.dir.test}" />
+		</junit>
+		<zip zipfile="${build.dir}/${basename}-test.zip" basedir="${build.dir.test}" excludes="classes/**" />
+	</target>
+
+
+	<!-- Packages the classes into a JAR file -->
+	<target name="jar" depends="compile" description="Creates the binary JAR">
+		<!-- create binary JAR -->
+		<jar jarfile="${build.dir}/${basename}.jar" manifest="${resources.dir}/MANIFEST.MF">
+			<fileset dir="${build.dir.classes}" />
+			<fileset dir="${resources.dir.classpath}" />
+		</jar>
+	</target>
+
+	<target name="jar-src" depends="compile" description="Creates the source JAR">
+		<!-- create source JAR -->
+		<jar jarfile="${build.dir}/${basename}-sources.jar" basedir="${src.main.dir}" />
+	</target>
+
+	<target name="jar-doc">
+		<javadoc destdir="${doc.dir}" author="true" version="true" use="true" windowtitle="${javadoc.windowtitle}" doctitle="${javadoc.doctitle}" bottom="${javadoc.buttom}">
+			<packageset dir="${src.main.dir}" defaultexcludes="yes" />
+			<classpath refid="build.classpath" />
+			<group title="Packages" packages="${basename}.*" />
+			<link offline="true" href="http://docs.oracle.com/javase/7/docs/api/" packagelistURL="${api.url}/javase/7/" />
+		</javadoc>
+		<jar jarfile="${build.dir}/${basename}-javadoc.jar" update="true" basedir="${doc.dir}" />
+	</target>
+
+	<target name="deb" depends="jar, jar-doc, jar-src">
+		<copy todir="${build.dir}/deb">
+			<fileset dir="${resources.dir}/deb/" includes="**/*.html DEBIAN/*" />
+			<filterset refid="manifest" />
+		</copy>
+
+		<copy todir="${build.dir}/deb">
+			<fileset dir="${resources.dir}/deb/" excludes="**/*.html DEBIAN/*" />
+		</copy>
+
+		<copy file="${build.dir}/${basename}.jar" tofile="${dst.dir}/bundle/50_${basename}.jar" />
+
+		<chmod perm="755" type="file">
+			<fileset dir="${build.dir}/deb/DEBIAN">
+				<include name="preinst" />
+				<include name="postinst" />
+				<include name="prerm" />
+				<include name="postrm" />
+			</fileset>
+		</chmod>
+
+		<exec executable="fakeroot">
+			<arg value="dpkg" />
+			<arg value="-b" />
+			<arg value="${build.dir}/deb" />
+			<arg value="${build.dir}/${basename}.deb" />
+		</exec>
+	</target>
+
+	<target name="publish" depends="deb">
+		<ivy:resolve file="${resources.dir}/ivy.xml" />
+
+		<ivy:publish resolver="${ivy.resolver}" pubrevision="${manifest.Bundle-Version}" status="integration" overwrite="true">
+			<artifacts pattern="${build.dir}/[artifact].[ext]" />
+		</ivy:publish>
+	</target>
+
+</project>

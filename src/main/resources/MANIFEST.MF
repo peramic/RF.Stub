@@ -1,0 +1,22 @@
+Bundle-Name: Ha-VIS RF Test Device
+Bundle-SymbolicName: havis.device.test.rf
+Bundle-Activator: havis.device.test.rf.osgi.Activator
+Bundle-Version: 2.7.0
+Implementation-Version: 2.7
+Bundle-ManifestVersion: 2
+Bundle-Vendor: HARTING IT_SD
+Havis-Bundle: /OSGI-INF/havis.device.rf.properties, /OSGI-INF/havis.device.test.rf.properties
+Import-Package: 
+ havis.device.rf,
+ havis.device.rf.capabilities,
+ havis.device.rf.common,
+ havis.device.rf.common.util,
+ havis.device.rf.configuration,
+ havis.device.rf.exception,
+ havis.device.rf.tag,
+ havis.device.rf.tag.operation,
+ havis.device.rf.tag.result,
+ havis.device.test.hardware,
+ org.osgi.framework;resolution:=optional,
+ org.osgi.util.tracker;resolution:=optional
+
